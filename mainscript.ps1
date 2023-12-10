@@ -1,9 +1,9 @@
-#
-# In order to run the script, you will need to run the command Set-ExecutionPolicy RemoteSigned
-# Edits needed: line 7(remove exit command), line 15 (username), line 119 (for uninstall package names)
-# For user comparison and deletion, run other script separately
-# For more difficult problems, try downloading Win. Sysinternal Suite
+<# NOTES: 
+In order to run the script, you will need to run the command Set-ExecutionPolicy RemoteSigned Remember to remove the exit command below in order to run the script
+For user comparison and deletion, run other script separately (link is posted at the end of the script)
+It is highly recommended to download Windows Sysinternal Suite
 
+#>
 
 
 exit
@@ -11,15 +11,21 @@ exit
 echo "Job 1) ReadMe and forensics questions"
 pause
 
-# echo "The following opens a link to the readme:"
-# (Readme link here)
-# (Scoring report link here) 
+echo "The following opens a link to the readme:"
+Start-Process C:\CyberPatriot\README.url
+sleep 3
+Start-Process C:\CyberPatriot\ScoringReport.html
 pause
+cls
 
 echo "Read through the forensic questions." 
-# (Forensic question 1)
-# (Forensic question 2) 
+sleep 3
+Start-Process "C:\Users\eleven\Desktop\Forensics Question 1.txt"
+pause 
+Start-Process "C:\Users\eleven\Desktop\Forensics Question 2.txt"
 pause
+echo "Don't forget to save the .txt files when done. (Ctrl+S)"
+pause 
 
 echo "Job 2) Miscellaneous, Firewall, auto-downloads, guest account, and password changes."
 pause
@@ -30,10 +36,14 @@ netsh advfirewall set currentprofile state on
 netsh advfirewall set AllProfiles state on 
 cls
 
+<#
 echo "Creating GODMODE folder"
 Powershell godmode script: 
 
-# Define the path for the GodMode folder
+
+Error: this part doesn't actually work, and will need to be updated at some future point.
+
+ Define the path for the GodMode folder
 $godModeFolderPath = "$env:USERPROFILE\Desktop\GodMode.{ED7BA470-8E54-465E-825C-99712043E01C}"
 
 # Check if the GodMode folder already exists
@@ -49,17 +59,12 @@ if (Test-Path -Path $godModeFolderPath) {
         Write-Host "Failed to create GodMode folder."
     }
 }
+#>
 
-
-
-
-# Starts automatic update downloads
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update" -Name "AUOptions" -Value 4
-# Start downloading updates
-Invoke-Expression -Command "Start-Process -FilePath 'wuapp.exe' -ArgumentList '/updatenow' -Wait"
-cls
-echo "Start downloading firefox lastest version and any other needed updates not covered by this script manually."
+echo "Enable automatic updates and begin downloading them manually in settings."
 pause 
+Start-Process "ms-settings:windowsupdate"
+pause
 cls
 
 # Malwarebytes download link- Win 64-bit vers.
@@ -72,6 +77,10 @@ cls
 
 # Disables the guest account 
 net user Guest /active no 
+echo "Disable guest account and limit use of blank passwords to console only."
+echo "The path is Win+R -> Local Sec Pol -> Security Settings"
+pause
+cls
 
 # Displays the current user's username in prep for password change
 echo "Please ensure that you do not change the main account password."
@@ -117,12 +126,14 @@ foreach ($user in $users) {
 echo "enabling ctrl alt del upon login"
 pause
 # Edits the reg. key to enable ctrl alt del upon login
+# This still needs to be double checked in security options in local sec pol
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "DisableCAD" -Value 0
 cls
 # Define an array of service names
 $servicesToDisable = @(
     "SNMPTRAP",
     "RemoteRegistry"
+    "ftpscv"
 )
 
 # Loop through the services
@@ -149,11 +160,9 @@ foreach ($service in $servicesToDisable) {
     # Configure the service to start as "disabled"
     Set-Service -Name $service -StartupType Disabled
 }
-
+Set-Service -Name "ftpsvc" -StartupType Disabled
 # Display a message
 Write-Host "Services have been stopped and configured as 'disabled.'"
-
-# Pause for user input
 pause
 
 # Clear the console
@@ -244,15 +253,96 @@ pause
 cls
 
 
-echo "Stop file sharing."
-net stop lanmanserver
-fsmgmt.msc
-pause
+
 # Need to get rid of the shares
-echo "Remove any file shares without a $"
+echo "Review any file shares without a $"
 net share
 pause 
 cls
+
+<#
+.SYNOPSIS
+Prompts the user to stop the file sharing server.
+
+.DESCRIPTION
+Displays a prompt asking the user if they want to stop the file sharing server. 
+The default answer is "yes". If the user enters "yes" or presses enter, the file sharing server will be stopped.
+#>
+function Stop-FileSharingServerPrompt {
+    param (
+        [string]$DefaultAnswer = "yes"
+    )
+
+    # Prompt the user with the default answer
+    $answer = Read-Host "Do you want to stop the file sharing server? (Default: $DefaultAnswer)"
+
+    # Check if the user entered "yes" or pressed enter
+    if ($answer -eq "" -or $answer.ToLower() -eq "yes") {
+        # Stop the file sharing server
+        Stop-FileSharingServer
+    }
+}
+
+<#
+.SYNOPSIS
+Stops the file sharing server.
+#>
+function Stop-FileSharingServer {
+    # Code to stop the file sharing server goes here
+    Write-Output "File sharing server stopped."
+}
+
+# Usage example for the Stop-FileSharingServerPrompt.ps1 script
+
+# Prompt the user to stop the file sharing server
+Stop-FileSharingServerPrompt
+
+<#
+.SYNOPSIS
+Prompts the user to stop the Lanman server.
+
+.DESCRIPTION
+Displays a prompt asking the user if they want to stop the Lanman server. 
+If the user confirms, the Lanman server will be stopped. 
+If the user cancels, the script will exit without stopping the server.
+
+.INPUTS
+None
+
+.OUTPUTS
+None
+
+.EXAMPLE
+Stop-LanmanServerPrompt
+Prompts the user to stop the Lanman server and takes appropriate action based on the user's response.
+#>
+function Stop-LanmanServerPrompt {
+    # Prompt the user to stop the Lanman server
+    $response = Read-Host "Do you want to stop the Lanman server? (Y/N)"
+
+    # Convert the user's response to uppercase for case-insensitive comparison
+    $response = $response.ToUpper()
+
+    # Check the user's response
+    if ($response -eq "Y" -or $response -eq "YES") {
+        # Stop the Lanman server
+        Stop-Service -Name LanmanServer
+        Write-Output "Lanman server stopped."
+    }
+    elseif ($response -eq "N" -or $response -eq "NO") {
+        # User canceled, exit the script
+        Write-Output "Lanman server not stopped."
+        exit 0
+    }
+    else {
+        # Invalid response, display an error message and exit the script
+        Write-Output "Invalid response. Please enter Y or N."
+        exit 1
+    }
+}
+
+# Usage example for the Stop-LanmanServerPrompt function
+Stop-LanmanServerPrompt
 
 echo "Job 5) Delete unwanted apps"
 pause
@@ -314,10 +404,6 @@ echo "paste this link into your browser for the direct web page to the current v
 write-host "https://github.com/wulf77/Powershell-Scripts/blob/main/usercompareV2.ps1"
 pause 
 # Include instructions for both this script and the user compare, and how to run them in a readme file on github
-
-
-
-
 
 
 
